@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}Search Results - Python Academy{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+    <div class="mb-12">
+        <h1 class="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+            Search results for "<span class="text-primary-600">{{ query }}</span>"
+        </h1>
+        <p class="mt-2 text-slate-600 dark:text-slate-400">Found {{ subjects|length|add:chapters|length }} matches.</p>
+    </div>
+
+    {% if subjects or chapters %}
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+            {% if subjects %}
+            <section>
+                <h2 class="text-lg font-bold text-slate-400 uppercase tracking-widest mb-6">Courses</h2>
+                <div class="space-y-4">
+                    {% for subject in subjects %}
+                    <a href="{% url 'subject_detail' subject.slug %}" class="block bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-xl hover:border-primary-600 transition-all shadow-sm">
+                        <div class="flex items-center gap-4">
+                            <span class="text-2xl">{{ subject.icon }}</span>
+                            <h3 class="font-bold text-slate-900 dark:text-white">{{ subject.title }}</h3>
+                        </div>
+                        <p class="mt-2 text-sm text-slate-600 dark:text-slate-400 line-clamp-2">{{ subject.description }}</p>
+                    </a>
+                    {% endfor %}
+                </div>
+            </section>
+            {% endif %}
+
+            {% if chapters %}
+            <section>
+                <h2 class="text-lg font-bold text-slate-400 uppercase tracking-widest mb-6">Chapters</h2>
+                <div class="space-y-4">
+                    {% for chapter in chapters %}
+                    <a href="{% url 'chapter_detail' chapter.subject.slug chapter.slug %}" class="block bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-xl hover:border-primary-600 transition-all shadow-sm">
+                        <div class="flex justify-between items-start">
+                            <h3 class="font-bold text-slate-900 dark:text-white">{{ chapter.title }}</h3>
+                            <span class="text-[10px] bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-slate-500 font-mono">{{ chapter.subject.title }}</span>
+                        </div>
+                        <p class="mt-2 text-sm text-slate-600 dark:text-slate-400 line-clamp-2">In {{ chapter.subject.title }} course</p>
+                    </a>
+                    {% endfor %}
+                </div>
+            </section>
+            {% endif %}
+        </div>
+    {% else %}
+        <div class="text-center py-32 bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700">
+            <svg class="mx-auto h-12 w-12 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            <h3 class="mt-2 text-sm font-semibold text-slate-900 dark:text-white">No results found</h3>
+            <p class="mt-1 text-sm text-slate-500">Try adjusting your search terms or browse our courses.</p>
+            <div class="mt-6">
+                <a href="/" class="btn btn-primary">Go Home</a>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

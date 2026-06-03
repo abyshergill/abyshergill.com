@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}Explore Courses - Aby Shergill{% endblock %}
+
+{% block content %}
+<div class="relative overflow-hidden py-16 sm:py-24 lg:py-32">
+    <div class="absolute inset-0 -z-10 bg-[radial-gradient(45rem_50rem_at_top,theme(colors.primary.100),theme(colors.slate.50))] dark:bg-[radial-gradient(45rem_50rem_at_top,theme(colors.primary.900/0.2),theme(colors.slate.950))] opacity-20"></div>
+    <div class="mx-auto max-w-7xl px-6 lg:px-8 text-center">
+        <h1 class="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-6xl mb-6">
+            Master Python with <span class="text-primary-600">Confidence</span>
+        </h1>
+        <p class="mx-auto max-w-2xl text-base sm:text-lg leading-7 sm:leading-8 text-slate-600 dark:text-slate-400 mb-10">
+            From data science to web development, our curated paths help you master Python through hands-on experience and real-world projects.
+        </p>
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-x-6">
+            <a href="#courses" class="btn btn-primary w-full sm:w-auto px-8 py-3">Browse Courses</a>
+            <a href="/contact/" class="text-sm font-semibold leading-6 text-slate-900 dark:text-white">Contact support <span aria-hidden="true">→</span></a>
+        </div>
+    </div>
+</div>
+
+<div id="courses" class="mx-auto max-w-7xl px-6 lg:px-8 pb-24">
+    <div class="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+        {% for subject in subjects %}
+        <a href="{% url 'subject_detail' subject.slug %}" class="group relative flex flex-col bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-8 shadow-sm hover:shadow-xl hover:shadow-primary-500/10 transition-all duration-300 hover:-translate-y-1">
+            <div class="mb-6 flex h-12 w-12 items-center justify-center rounded-xl bg-primary-50 dark:bg-primary-900/30 text-2xl group-hover:scale-110 transition-transform">
+                {{ subject.icon }}
+            </div>
+            <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-3">{{ subject.title }}</h3>
+            <p class="text-slate-600 dark:text-slate-400 text-sm leading-relaxed mb-6 flex-grow">
+                {{ subject.description }}
+            </p>
+            <div class="flex items-center gap-2 text-primary-600 font-semibold text-sm group-hover:gap-3 transition-all">
+                Start Learning
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+            </div>
+        </a>
+        {% empty %}
+        <div class="col-span-full text-center py-12 bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700">
+            <p class="text-slate-500">No courses available at the moment. Check back soon!</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

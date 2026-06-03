@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}Q&A - Python Academy{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+    <div class="text-center mb-16">
+        <h1 class="text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-5xl">General Questions & Answers</h1>
+        <p class="mt-4 text-lg text-slate-600 dark:text-slate-400">Everything you need to know about Python Academy and our courses.</p>
+    </div>
+
+    <div class="space-y-8">
+        {% for qa in qas %}
+        <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-8 shadow-sm transition-all hover:shadow-md">
+            <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-4 flex gap-3">
+                <span class="text-primary-600">Q:</span>
+                {{ qa.question }}
+            </h3>
+            <div class="flex gap-3 text-slate-600 dark:text-slate-400 leading-relaxed">
+                <span class="text-emerald-600 font-bold shrink-0">A:</span>
+                <p>{{ qa.answer|linebreaksbr }}</p>
+            </div>
+        </div>
+        {% empty %}
+        <div class="text-center py-20 bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700">
+            <p class="text-slate-500">No questions yet. Be the first to ask!</p>
+            <a href="/contact/" class="mt-4 btn btn-primary">Contact Us</a>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

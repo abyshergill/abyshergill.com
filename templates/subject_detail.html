@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block title %}{{ subject.title }} - Python Academy{% endblock %}
+
+{% block content %}
+<div class="bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <nav class="flex text-sm font-medium text-slate-500 gap-2 items-center">
+            <a href="/" class="hover:text-primary-600 transition-colors">Courses</a>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+            <span class="text-slate-900 dark:text-white">{{ subject.title }}</span>
+        </nav>
+    </div>
+</div>
+
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <div class="lg:flex lg:gap-12">
+        <!-- Sidebar -->
+        <aside class="hidden lg:block lg:w-72 flex-shrink-0">
+            <div class="sticky top-24">
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6 px-4">Course Syllabus</h3>
+                <nav class="space-y-1">
+                    {% for chapter in chapters %}
+                    <a href="{% url 'chapter_detail' subject.slug chapter.slug %}" 
+                       class="flex items-center px-4 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 
+                       {% if current_chapter.id == chapter.id %}
+                        bg-primary-600 text-white shadow-lg shadow-primary-500/30
+                       {% else %}
+                        text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 hover:text-primary-600
+                       {% endif %}">
+                        {{ chapter.title }}
+                    </a>
+                    {% endfor %}
+                </nav>
+            </div>
+        </aside>
+
+        <!-- Mobile Syllabus Dropdown (simplified for now) -->
+        <div class="lg:hidden mb-8">
+            <details class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
+                <summary class="p-4 font-bold text-slate-900 dark:text-white cursor-pointer flex justify-between items-center">
+                    Course Syllabus
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </summary>
+                <div class="p-2 space-y-1 bg-slate-50 dark:bg-slate-950/50">
+                    {% for chapter in chapters %}
+                    <a href="{% url 'chapter_detail' subject.slug chapter.slug %}" 
+                       class="block px-4 py-2 text-sm {% if current_chapter.id == chapter.id %}text-primary-600 font-bold{% else %}text-slate-600{% endif %}">
+                        {{ chapter.title }}
+                    </a>
+                    {% endfor %}
+                </div>
+            </details>
+        </div>
+
+        <!-- Content -->
+        <main class="flex-grow min-w-0">
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
+                <div class="border-b border-slate-100 dark:border-slate-800 px-4 sm:px-8 py-4 bg-slate-50/50 dark:bg-slate-950/30 flex justify-between items-center">
+                    <span class="text-[10px] sm:text-xs font-mono text-slate-500 truncate mr-2">{{ current_chapter.title }}.md</span>
+                    <span class="text-[10px] sm:text-xs text-slate-400 whitespace-nowrap">Estimated read: 5 mins</span>
+                </div>
+                <article class="p-6 sm:p-12 prose prose-slate dark:prose-invert prose-indigo max-w-none 
+                                prose-headings:font-extrabold prose-headings:tracking-tight
+                                prose-headings:break-words
+                                prose-pre:bg-slate-900 prose-pre:border prose-pre:border-slate-800 prose-pre:rounded-xl
+                                prose-img:rounded-xl">
+                    {{ content_html|safe }}
+                </article>
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Copy button enhancement
+    document.querySelectorAll('.code-container').forEach(container => {
+        const copyBtn = container.querySelector('.copy-code-btn');
+        const pre = container.querySelector('pre');
+        
+        // Tailwind styling for injected copy buttons
+        if (copyBtn) {
+            copyBtn.className = "absolute top-3 right-3 p-1.5 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700 rounded-md text-xs text-slate-300 transition-colors z-10";
+        }
+
+        copyBtn?.addEventListener('click', () => {
+            navigator.clipboard.writeText(pre.innerText).then(() => {
+                const originalText = copyBtn.innerText;
+                copyBtn.innerText = "Copied!";
+                setTimeout(() => { copyBtn.innerText = originalText; }, 2000);
+            });
+        });
+    });
+</script>
+{% endblock %}

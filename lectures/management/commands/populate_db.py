@@ -51,6 +51,7 @@ class Command(BaseCommand):
                         defaults={
                             'title': title,
                             'content': content,
+                            'file_path': readme_path,
                             'order': i
                         }
                     )

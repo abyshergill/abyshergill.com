@@ -1,8 +1,27 @@
 import markdown
+import time
+import os
+from django.utils import timezone
 from django.shortcuts import render, get_object_or_404, redirect
 from django.db.models import Q
-from .models import Subject, Chapter, QuestionAnswer
+from django.contrib.auth.hashers import make_password, check_password
+from .models import Subject, Chapter, QuestionAnswer, LoginAttempt, UserProfile
 from .forms import ContactForm
+
+def get_client_ip(request):
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        ip = x_forwarded_for.split(',')[0]
+    else:
+        ip = request.META.get('REMOTE_ADDR')
+    return ip
+
+def get_login_delay(username, ip_address):
+    attempt, created = LoginAttempt.objects.get_or_create(username=username, ip_address=ip_address)
+    if attempt.failures < 3:
+        return 0, attempt
+    delay = (attempt.failures - 2) * 10
+    return delay, attempt
 
 def home(request):
     subjects = Subject.objects.all()
@@ -52,7 +71,7 @@ def signup_view(request):
             UserProfile.objects.create(
                 user=user,
                 security_question=form.cleaned_data['security_question'],
-                security_answer=form.cleaned_data['security_answer'],
+                security_answer=make_password(form.cleaned_data['security_answer'].strip().lower()),
                 security_hint=form.cleaned_data['security_hint']
             )
             login(request, user)
@@ -80,13 +99,32 @@ def forgot_password_step2(request):
     
     user = User.objects.get(id=user_id)
     profile = user.profile
-    
+    ip_address = get_client_ip(request)
+    # Use user_id as identifier for recovery attempts
+    attempt_id = f"recovery_{user_id}"
+    delay, attempt = get_login_delay(attempt_id, ip_address)
+
     if request.method == 'POST':
+        if delay > 0:
+            last_attempt_time = attempt.last_attempt
+            time_since_last = (timezone.now() - last_attempt_time).total_seconds()
+            if time_since_last < delay:
+                wait_time = int(delay - time_since_last)
+                messages.error(request, f"Too many failed attempts. Please wait {wait_time} seconds.")
+                return render(request, 'forgot_password_step2.html', {
+                    'question': profile.security_question,
+                    'hint': profile.security_hint
+                })
+
         answer = request.POST.get('answer')
-        if answer.strip().lower() == profile.security_answer.strip().lower():
+        if check_password(answer.strip().lower(), profile.security_answer):
             request.session['recovery_verified'] = True
+            attempt.failures = 0
+            attempt.save()
             return redirect('forgot_password_reset')
         else:
+            attempt.failures += 1
+            attempt.save()
             messages.error(request, "Incorrect answer.")
             
     return render(request, 'forgot_password_step2.html', {
@@ -121,9 +159,24 @@ def logout_view(request):
 
 def login_view(request):
     if request.method == 'POST':
-        login_val = request.POST.get('username')
+        login_val = request.POST.get('login') # Fixed from 'username' to 'login'
         password = request.POST.get('password')
         
+        if not login_val:
+            messages.error(request, "Username or Email is required.")
+            return render(request, 'login.html')
+
+        ip_address = get_client_ip(request)
+        delay, attempt = get_login_delay(login_val, ip_address)
+        
+        if delay > 0:
+            last_attempt_time = attempt.last_attempt
+            time_since_last = (timezone.now() - last_attempt_time).total_seconds()
+            if time_since_last < delay:
+                wait_time = int(delay - time_since_last)
+                messages.error(request, f"Too many failed attempts. Please wait {wait_time} seconds.")
+                return render(request, 'login.html')
+
         # Try to find a user by username or email
         user = None
         if '@' in login_val:
@@ -138,8 +191,12 @@ def login_view(request):
             
         if user is not None:
             login(request, user)
+            attempt.failures = 0
+            attempt.save()
             return redirect('home')
         else:
+            attempt.failures += 1
+            attempt.save()
             messages.error(request, "Invalid username or password.")
             return render(request, 'login.html')
     return render(request, 'login.html')
@@ -153,6 +210,22 @@ def subject_detail(request, subject_slug, chapter_slug=None):
     else:
         current_chapter = chapters.first()
         
+    if current_chapter and current_chapter.file_path:
+        # Sync based on modification time to avoid overwriting newer Admin changes
+        if os.path.exists(current_chapter.file_path):
+            file_mtime = timezone.datetime.fromtimestamp(os.path.getmtime(current_chapter.file_path), tz=timezone.get_current_timezone())
+            
+            # If disk file is significantly newer than database record, sync from disk
+            # We use a small buffer (e.g. 1 second) to account for filesystem precision
+            if file_mtime > current_chapter.updated_at + timezone.timedelta(seconds=1):
+                with open(current_chapter.file_path, 'r') as f:
+                    disk_content = f.read()
+                if disk_content != current_chapter.content:
+                    current_chapter.content = disk_content
+                    # We use .save() which will also trigger Chapter.save() to write back,
+                    # but since content is now same as disk, it's safe.
+                    current_chapter.save()
+
     content_html = ""
     if current_chapter:
         # Convert markdown to HTML

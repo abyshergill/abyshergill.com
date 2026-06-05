@@ -1,5 +1,5 @@
-Welcome to the launch of your Django mastery journey! We are wiping the slate clean and building a rock-solid foundation.
-
+WWelcome to the launch of your Django mastery journey! We are wiping the slate clean and building a rock-solid foundation.
+![testing_img](/media/chapter_images/main.jpeg)
 Django is known as the **"web framework for perfectionists with deadlines."** It handles the heavy lifting (like security, database management, and routing) right out of the box so you can focus on building your app instead of reinventing the wheel.
 
 Here is a quick birds-eye view of our roadmap before we dive into the trenches:

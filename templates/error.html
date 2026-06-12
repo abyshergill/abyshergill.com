@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}{{ error_code }} - {{ error_title }} - abyshergill.com{% endblock %}
+
+{% block content %}
+<div class="min-h-[70vh] flex items-center justify-center px-4 py-24">
+    <div class="max-w-xl w-full text-center">
+        <!-- Error Illustration/Icon -->
+        <div class="relative mb-8">
+            <div class="text-[12rem] font-black text-slate-100 dark:text-slate-900 leading-none select-none">
+                {{ error_code }}
+            </div>
+            <div class="absolute inset-0 flex items-center justify-center">
+                <div class="p-5 bg-white dark:bg-slate-800 rounded-3xl shadow-2xl border border-slate-100 dark:border-slate-700 animate-bounce">
+                    <span class="text-6xl">{{ error_icon|default:"🔍" }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Error Message -->
+        <h1 class="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white mb-4 tracking-tight">
+            {{ error_title }}
+        </h1>
+        <p class="text-lg text-slate-600 dark:text-slate-400 mb-10 leading-relaxed">
+            {{ error_message }}
+        </p>
+
+        <!-- Actions -->
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <a href="/" class="btn btn-primary px-8 py-3 w-full sm:w-auto">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+                </svg>
+                Back to Home
+            </a>
+            <button onclick="window.history.back()" class="btn btn-outline px-8 py-3 w-full sm:w-auto">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                </svg>
+                Go Back
+            </button>
+        </div>
+
+        <!-- Helpful Links -->
+        <div class="mt-16 pt-8 border-t border-slate-200 dark:border-slate-800">
+            <p class="text-sm font-medium text-slate-500 mb-4 uppercase tracking-widest">Maybe you were looking for?</p>
+            <div class="flex flex-wrap justify-center gap-6">
+                <a href="/course/python/" class="text-sm font-bold text-slate-600 dark:text-slate-400 hover:text-primary-600 transition-colors">Python Basics</a>
+                <a href="/course/django/" class="text-sm font-bold text-slate-600 dark:text-slate-400 hover:text-primary-600 transition-colors">Django Framework</a>
+                <a href="/qa/" class="text-sm font-bold text-slate-600 dark:text-slate-400 hover:text-primary-600 transition-colors">Q&A Help</a>
+                <a href="/contact/" class="text-sm font-bold text-slate-600 dark:text-slate-400 hover:text-primary-600 transition-colors">Support</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -17,11 +17,19 @@ def get_client_ip(request):
     return ip
 
 def get_login_delay(username, ip_address):
-    attempt, created = LoginAttempt.objects.get_or_create(username=username, ip_address=ip_address)
-    if attempt.failures < 3:
-        return 0, attempt
-    delay = (attempt.failures - 2) * 10
-    return delay, attempt
+    # Track attempts for both username and IP combined, and IP alone
+    attempt, _ = LoginAttempt.objects.get_or_create(username=username, ip_address=ip_address)
+    ip_only_attempt, _ = LoginAttempt.objects.get_or_create(username='_IP_ONLY_', ip_address=ip_address)
+    
+    # Use the higher failure count for more aggressive protection
+    max_failures = max(attempt.failures, ip_only_attempt.failures)
+    
+    if max_failures < 3:
+        return 0, attempt, ip_only_attempt
+    
+    # Exponential increase: 15s, 30s, 60s, 120s... up to 1 hour
+    delay = min(pow(2, max_failures - 3) * 15, 3600)
+    return delay, attempt, ip_only_attempt
 
 def home(request):
     subjects = Subject.objects.all()
@@ -74,7 +82,7 @@ def signup_view(request):
                 security_answer=make_password(form.cleaned_data['security_answer'].strip().lower()),
                 security_hint=form.cleaned_data['security_hint']
             )
-            login(request, user)
+            login(request, user, backend='django.contrib.auth.backends.ModelBackend')
             messages.success(request, "Account created successfully!")
             return redirect('home')
     else:
@@ -102,11 +110,11 @@ def forgot_password_step2(request):
     ip_address = get_client_ip(request)
     # Use user_id as identifier for recovery attempts
     attempt_id = f"recovery_{user_id}"
-    delay, attempt = get_login_delay(attempt_id, ip_address)
+    delay, attempt, ip_attempt = get_login_delay(attempt_id, ip_address)
 
     if request.method == 'POST':
         if delay > 0:
-            last_attempt_time = attempt.last_attempt
+            last_attempt_time = max(attempt.last_attempt, ip_attempt.last_attempt)
             time_since_last = (timezone.now() - last_attempt_time).total_seconds()
             if time_since_last < delay:
                 wait_time = int(delay - time_since_last)
@@ -116,15 +124,19 @@ def forgot_password_step2(request):
                     'hint': profile.security_hint
                 })
 
-        answer = request.POST.get('answer')
-        if check_password(answer.strip().lower(), profile.security_answer):
+        answer = request.POST.get('answer', '').strip().lower()
+        if check_password(answer, profile.security_answer):
             request.session['recovery_verified'] = True
             attempt.failures = 0
             attempt.save()
+            ip_attempt.failures = 0
+            ip_attempt.save()
             return redirect('forgot_password_reset')
         else:
             attempt.failures += 1
             attempt.save()
+            ip_attempt.failures += 1
+            ip_attempt.save()
             messages.error(request, "Incorrect answer.")
             
     return render(request, 'forgot_password_step2.html', {
@@ -159,18 +171,18 @@ def logout_view(request):
 
 def login_view(request):
     if request.method == 'POST':
-        login_val = request.POST.get('login') # Fixed from 'username' to 'login'
-        password = request.POST.get('password')
+        login_val = request.POST.get('login', '').strip()
+        password = request.POST.get('password', '')
         
         if not login_val:
             messages.error(request, "Username or Email is required.")
             return render(request, 'login.html')
 
         ip_address = get_client_ip(request)
-        delay, attempt = get_login_delay(login_val, ip_address)
+        delay, attempt, ip_attempt = get_login_delay(login_val, ip_address)
         
         if delay > 0:
-            last_attempt_time = attempt.last_attempt
+            last_attempt_time = max(attempt.last_attempt, ip_attempt.last_attempt)
             time_since_last = (timezone.now() - last_attempt_time).total_seconds()
             if time_since_last < delay:
                 wait_time = int(delay - time_since_last)
@@ -193,13 +205,41 @@ def login_view(request):
             login(request, user)
             attempt.failures = 0
             attempt.save()
+            ip_attempt.failures = 0
+            ip_attempt.save()
             return redirect('home')
         else:
             attempt.failures += 1
             attempt.save()
+            ip_attempt.failures += 1
+            ip_attempt.save()
             messages.error(request, "Invalid username or password.")
             return render(request, 'login.html')
     return render(request, 'login.html')
+
+def handler404(request, exception):
+    return render(request, 'error.html', {
+        'error_code': '404',
+        'error_title': 'Page Not Found',
+        'error_message': "Oops! The page you're looking for seems to have vanished into the digital void.",
+        'error_icon': '🔍'
+    }, status=404)
+
+def handler500(request):
+    return render(request, 'error.html', {
+        'error_code': '500',
+        'error_title': 'Internal Server Error',
+        'error_message': "Our servers are having a bit of a moment. We're working on fixing this right now.",
+        'error_icon': '🛠️'
+    }, status=500)
+
+def handler403(request, exception):
+    return render(request, 'error.html', {
+        'error_code': '403',
+        'error_title': 'Permission Denied',
+        'error_message': "Sorry, you don't have the magic keys to access this area.",
+        'error_icon': '🚫'
+    }, status=403)
 
 def subject_detail(request, subject_slug, chapter_slug=None):
     subject = get_object_or_404(Subject, slug=subject_slug)

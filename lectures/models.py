@@ -62,17 +62,25 @@ class Chapter(models.Model):
         if not self.slug:
             self.slug = slugify(self.title)
         
-        # If saving (e.g. from admin) and we have a file_path, update the disk file
-        if self.file_path and os.path.exists(self.file_path):
-            try:
-                # Avoid circular sync by checking if disk is already same
-                with open(self.file_path, 'r') as f:
-                    disk_content = f.read()
-                if disk_content != self.content:
-                    with open(self.file_path, 'w') as f:
-                        f.write(self.content)
-            except Exception:
-                pass
+        # Security: Ensure file_path is within the project directory to prevent path traversal
+        if self.file_path:
+            # Normalize and check if the path is inside the project root
+            base_dir = os.path.abspath(os.getcwd())
+            target_path = os.path.abspath(self.file_path)
+            
+            if not target_path.startswith(base_dir):
+                self.file_path = None # Disable sync if path is outside project
+            
+            # If saving (e.g. from admin) and we have a valid file_path, update the disk file
+            if self.file_path and os.path.exists(self.file_path):
+                try:
+                    with open(self.file_path, 'r') as f:
+                        disk_content = f.read()
+                    if disk_content != self.content:
+                        with open(self.file_path, 'w') as f:
+                            f.write(self.content)
+                except Exception:
+                    pass
 
         super().save(*args, **kwargs)
 

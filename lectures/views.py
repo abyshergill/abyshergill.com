@@ -203,7 +203,7 @@ def login_view(request):
 
 def subject_detail(request, subject_slug, chapter_slug=None):
     subject = get_object_or_404(Subject, slug=subject_slug)
-    chapters = subject.chapters.all()
+    chapters = subject.chapters.prefetch_related('topics').all()
     
     if chapter_slug:
         current_chapter = get_object_or_404(Chapter, subject=subject, slug=chapter_slug)
@@ -228,8 +228,14 @@ def subject_detail(request, subject_slug, chapter_slug=None):
 
     content_html = ""
     if current_chapter:
-        # Convert markdown to HTML
-        md = markdown.Markdown(extensions=['extra', 'codehilite', 'toc'])
+        # Convert markdown to HTML with heading IDs
+        # We remove codehilite to keep code blocks plain as requested
+        extensions = [
+            'extra', 
+            'toc',
+            'fenced_code',
+        ]
+        md = markdown.Markdown(extensions=extensions)
         content_html = md.convert(current_chapter.content)
         
         # Post-processing: wrap pre/code in code-container for our CSS
@@ -237,9 +243,14 @@ def subject_detail(request, subject_slug, chapter_slug=None):
         content_html = content_html.replace('<pre>', '<div class="code-container relative group"><button class="copy-code-btn">Copy</button><pre>')
         content_html = content_html.replace('</pre>', '</pre></div>')
 
-    return render(request, 'subject_detail.html', {
+    context = {
         'subject': subject,
         'chapters': chapters,
         'current_chapter': current_chapter,
         'content_html': content_html,
-    })
+    }
+
+    if request.headers.get('HX-Request'):
+        return render(request, 'partials/chapter_content.html', context)
+
+    return render(request, 'subject_detail.html', context)

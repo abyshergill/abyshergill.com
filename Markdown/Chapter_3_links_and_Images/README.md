@@ -92,4 +92,3 @@ Let's see if you can spot the differences before moving forward. Try writing or 
 1. A regular link to your favorite website.
 2. An image of a cat with the alt text "A cute kitten".
 3. A reference link nickname setup.
-

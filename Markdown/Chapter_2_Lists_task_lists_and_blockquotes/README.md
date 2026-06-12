@@ -107,4 +107,3 @@ Let's see if you've got this down before we move to the next chapter. Try visual
 1. A blockquote containing a piece of advice.
 2. A numbered list inside or below that blockquote.
 3. A 2-item checklist where one item is checked off and one is left blank.
-

@@ -17,57 +17,78 @@
     <div class="lg:flex lg:gap-12">
         <!-- Sidebar -->
         <aside class="hidden lg:block lg:w-72 flex-shrink-0">
-            <div class="sticky top-24">
+            <div class="sticky top-24 max-h-[calc(100vh-8rem)] flex flex-col">
                 <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6 px-4">Course Syllabus</h3>
-                <nav class="space-y-1">
+                <nav id="sidebar-nav" class="space-y-2 overflow-y-auto pr-2 custom-scrollbar flex-grow">
                     {% for chapter in chapters %}
-                    <a href="{% url 'chapter_detail' subject.slug chapter.slug %}" 
-                       class="flex items-center px-4 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 
-                       {% if current_chapter.id == chapter.id %}
-                        bg-primary-600 text-white shadow-lg shadow-primary-500/30
-                       {% else %}
-                        text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 hover:text-primary-600
-                       {% endif %}">
-                        {{ chapter.title }}
-                    </a>
+                    <div class="chapter-container">
+                        <details class="group" {% if current_chapter.id == chapter.id %}open{% endif %}>
+                            <summary class="list-none cursor-pointer outline-none">
+                                <div class="chapter-link-wrapper flex items-center justify-between px-4 py-2.5 text-[15px] font-semibold rounded-xl transition-all duration-200 
+                                   {% if current_chapter.id == chapter.id %}
+                                    bg-primary-600 text-white shadow-lg shadow-primary-500/30 active-chapter
+                                   {% else %}
+                                    text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-900 hover:text-primary-600
+                                   {% endif %}"
+                                   hx-get="{% url 'chapter_detail' subject.slug chapter.slug %}"
+                                   hx-target="#chapter-content-container"
+                                   hx-swap="outerHTML"
+                                   hx-push-url="true"
+                                   onclick="updateActiveChapter(this)">
+                                    <span class="flex-grow mr-2">{{ chapter.title }}</span>
+                                    {% if chapter.topics.exists %}
+                                    <svg class="w-4 h-4 transform transition-transform duration-200 group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                    </svg>
+                                    {% endif %}
+                                </div>
+                            </summary>
+                            {% if chapter.topics.exists %}
+                            <div class="ml-6 mt-1 space-y-1 border-l-2 border-slate-100 dark:border-slate-800">
+                                {% for topic in chapter.topics.all %}
+                                <a href="#{{ topic.slug }}" 
+                                   class="block px-4 py-1.5 text-sm text-slate-500 dark:text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors font-medium">
+                                    {{ topic.title }}
+                                </a>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </details>
+                    </div>
                     {% endfor %}
                 </nav>
             </div>
         </aside>
 
-        <!-- Mobile Syllabus Dropdown (simplified for now) -->
+        <!-- Mobile Syllabus Dropdown -->
         <div class="lg:hidden mb-8">
-            <details class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
+            <details class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
                 <summary class="p-4 font-bold text-slate-900 dark:text-white cursor-pointer flex justify-between items-center">
                     Course Syllabus
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                 </summary>
-                <div class="p-2 space-y-1 bg-slate-50 dark:bg-slate-950/50">
+                <div class="p-2 space-y-2 bg-slate-50 dark:bg-slate-950/50 max-h-96 overflow-y-auto custom-scrollbar">
                     {% for chapter in chapters %}
-                    <a href="{% url 'chapter_detail' subject.slug chapter.slug %}" 
-                       class="block px-4 py-2 text-sm {% if current_chapter.id == chapter.id %}text-primary-600 font-bold{% else %}text-slate-600{% endif %}">
-                        {{ chapter.title }}
-                    </a>
+                    <div class="mobile-chapter">
+                        <div class="flex items-center justify-between px-4 py-2">
+                            <div class="mobile-chapter-link cursor-pointer text-sm {% if current_chapter.id == chapter.id %}text-primary-600 font-bold{% else %}text-slate-600 dark:text-slate-400{% endif %}"
+                                 hx-get="{% url 'chapter_detail' subject.slug chapter.slug %}"
+                                 hx-target="#chapter-content-container"
+                                 hx-swap="outerHTML"
+                                 hx-push-url="true"
+                                 onclick="this.closest('details').open = false;">
+                                {{ chapter.title }}
+                            </div>
+                        </div>
+                    </div>
                     {% endfor %}
                 </div>
             </details>
         </div>
 
-        <!-- Contenuldeepshergillt -->
+        <!-- Content -->
         <main class="flex-grow min-w-0">
-            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
-                <div class="border-b border-slate-100 dark:border-slate-800 px-4 sm:px-8 py-4 bg-slate-50/50 dark:bg-slate-950/30 flex justify-between items-center">
-                    <span class="text-[10px] sm:text-xs font-mono text-slate-500 truncate mr-2">{{ current_chapter.title }}.md</span>
-                    <span class="text-[10px] sm:text-xs text-slate-400 whitespace-nowrap">Estimated read: 5 mins</span>
-                </div>
-                <article class="p-6 sm:p-12 prose prose-slate dark:prose-invert prose-indigo max-w-none 
-                                prose-headings:font-extrabold prose-headings:tracking-tight
-                                prose-headings:break-words
-                                prose-pre:bg-slate-900 prose-pre:border prose-pre:border-slate-800 prose-pre:rounded-xl
-                                prose-img:rounded-xl">
-                    {{ content_html|safe }}
-                </article>
-            </div>
+            {% include "partials/chapter_content.html" %}
         </main>
     </div>
 </div>
@@ -75,6 +96,18 @@
 
 {% block extra_js %}
 <script>
+    function updateActiveChapter(element) {
+        // Remove active styles from all chapters
+        document.querySelectorAll('.chapter-link-wrapper').forEach(el => {
+            el.classList.remove('bg-primary-600', 'text-white', 'shadow-lg', 'shadow-primary-500/30', 'active-chapter');
+            el.classList.add('text-slate-600', 'dark:text-slate-400', 'hover:bg-slate-100', 'dark:hover:bg-slate-900', 'hover:text-primary-600');
+        });
+
+        // Add active styles to clicked chapter
+        element.classList.add('bg-primary-600', 'text-white', 'shadow-lg', 'shadow-primary-500/30', 'active-chapter');
+        element.classList.remove('text-slate-600', 'dark:text-slate-400', 'hover:bg-slate-100', 'dark:hover:bg-slate-900', 'hover:text-primary-600');
+    }
+
     // Copy button enhancement
     document.querySelectorAll('.code-container').forEach(container => {
         const copyBtn = container.querySelector('.copy-code-btn');

@@ -1,4 +1,5 @@
 import os
+import re
 from django.db import models
 from django.utils.text import slugify
 from django.contrib.auth.models import User
@@ -12,7 +13,19 @@ class UserProfile(models.Model):
     def __str__(self):
         return f"Profile for {self.user.username}"
 
+class Category(models.Model):
+    name = models.CharField(max_length=100)
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        verbose_name_plural = "Categories"
+        ordering = ['order']
+
+    def __str__(self):
+        return self.name
+
 class Subject(models.Model):
+    category = models.ForeignKey(Category, related_name='subjects', on_delete=models.SET_NULL, null=True, blank=True)
     title = models.CharField(max_length=200)
     slug = models.SlugField(unique=True, blank=True)
     description = models.TextField()
@@ -27,12 +40,18 @@ class Subject(models.Model):
         return self.title
 
 class Chapter(models.Model):
+    TOPIC_LEVEL_CHOICES = [
+        (2, 'Level 2 (##)'),
+        (3, 'Level 3 (###)'),
+    ]
+    
     subject = models.ForeignKey(Subject, related_name='chapters', on_delete=models.CASCADE)
     title = models.CharField(max_length=200)
     slug = models.SlugField(blank=True)
     content = models.TextField() # Markdown content
     file_path = models.CharField(max_length=500, blank=True, null=True)
     order = models.PositiveIntegerField(default=0)
+    topic_level = models.PositiveSmallIntegerField(choices=TOPIC_LEVEL_CHOICES, default=2)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -57,8 +76,54 @@ class Chapter(models.Model):
 
         super().save(*args, **kwargs)
 
+        # Remove code blocks before extracting topics to avoid false positives
+        # Use non-greedy matching and multi-line support
+        clean_content = re.sub(r'```[\s\S]*?```', '', self.content)
+        clean_content = re.sub(r'~~~[\s\S]*?~~~', '', clean_content)
+        # Remove inline code `...`
+        clean_content = re.sub(r'`[^`]+`', '', clean_content)
+
+        # Automatically extract topics from content based on chosen level
+        prefix = '#' * self.topic_level
+        # Regex explanation:
+        # ^ - start of line
+        # {prefix} - the exact number of # chosen
+        # \s+ - at least one space
+        # ([^\n]+) - capture everything until the end of the line
+        pattern = rf'^{prefix}\s+([^\n]+)$'
+        topics_found = re.findall(pattern, clean_content, re.MULTILINE)
+        
+        # Only update if topics have actually changed to avoid unnecessary DB writes
+        existing_topics = list(self.topics.values_list('title', flat=True))
+        if topics_found != existing_topics:
+            self.topics.all().delete()
+            for i, topic_title in enumerate(topics_found):
+                Topic.objects.create(
+                    chapter=self,
+                    title=topic_title.strip(),
+                    order=i
+                )
+
     def __str__(self):
         return f"{self.subject.title} - {self.title}"
+
+class Topic(models.Model):
+    chapter = models.ForeignKey(Chapter, related_name='topics', on_delete=models.CASCADE)
+    title = models.CharField(max_length=200)
+    slug = models.SlugField(blank=True)
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['order']
+        unique_together = ('chapter', 'slug')
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.title)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.chapter.title} - {self.title}"
 
 class ChapterImage(models.Model):
     chapter = models.ForeignKey(Chapter, related_name='images', on_delete=models.CASCADE)

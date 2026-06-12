@@ -1,5 +1,19 @@
 from django.contrib import admin
-from .models import Subject, Chapter, ContactMessage, QuestionAnswer, UserProfile, LoginAttempt, ChapterImage
+from .models import Subject, Chapter, ContactMessage, QuestionAnswer, UserProfile, LoginAttempt, ChapterImage, Category, Topic
+
+@admin.register(Category)
+class CategoryAdmin(admin.ModelAdmin):
+    list_display = ('name', 'order')
+
+@admin.register(Topic)
+class TopicAdmin(admin.ModelAdmin):
+    list_display = ('title', 'chapter', 'order')
+    list_filter = ('chapter__subject', 'chapter')
+    search_fields = ('title',)
+
+class TopicInline(admin.TabularInline):
+    model = Topic
+    extra = 1
 
 class ChapterImageInline(admin.TabularInline):
     model = ChapterImage
@@ -12,15 +26,17 @@ class ChapterInline(admin.TabularInline):
 
 @admin.register(Subject)
 class SubjectAdmin(admin.ModelAdmin):
-    list_display = ('title', 'slug')
+    list_display = ('title', 'category', 'slug')
+    list_filter = ('category',)
     prepopulated_fields = {'slug': ('title',)}
     inlines = [ChapterInline]
 
 @admin.register(Chapter)
 class ChapterAdmin(admin.ModelAdmin):
-    list_display = ('title', 'subject', 'order')
+    list_display = ('title', 'subject', 'topic_level', 'order')
     list_filter = ('subject',)
     prepopulated_fields = {'slug': ('title',)}
+    inlines = [TopicInline, ChapterImageInline]
 
 @admin.register(ChapterImage)
 class ChapterImageAdmin(admin.ModelAdmin):

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Aby Shergill{% endblock %}</title>
     <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -37,6 +38,9 @@
     </script>
     <style type="text/tailwindcss">
         @layer base {
+            html { scroll-behavior: smooth; }
+            /* Offset for sticky header (h-16 = 64px) plus some padding */
+            h1, h2, h3, h4, h5, h6 { @apply scroll-mt-24; }
             body { @apply bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 antialiased; }
         }
         @layer components {
@@ -44,6 +48,44 @@
             .btn-primary { @apply bg-primary-600 text-white hover:bg-primary-700 shadow-md hover:shadow-primary-500/20; }
             .btn-outline { @apply border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-900; }
             .input-field { @apply block w-full rounded-md border-0 py-1.5 px-3 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-primary-600 sm:text-sm sm:leading-6 dark:bg-slate-800 dark:text-white dark:ring-slate-700; }
+            
+            .custom-scrollbar {
+                scrollbar-width: thin;
+                scrollbar-color: theme('colors.slate.300') transparent;
+            }
+            .dark .custom-scrollbar {
+                scrollbar-color: theme('colors.slate.700') transparent;
+            }
+            .custom-scrollbar::-webkit-scrollbar {
+                width: 5px;
+            }
+            .custom-scrollbar::-webkit-scrollbar-track {
+                @apply bg-transparent;
+            }
+            .custom-scrollbar::-webkit-scrollbar-thumb {
+                @apply bg-slate-300 dark:bg-slate-700 rounded-full;
+            }
+            .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+                @apply bg-primary-500;
+            }
+
+            /* Clean Neutral Code Blocks (No Syntax Highlighting) */
+            .code-container { 
+                @apply my-6 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 shadow-sm; 
+            }
+            .code-container pre { 
+                @apply p-5 !m-0 text-[14px] leading-relaxed font-mono text-slate-700 dark:text-slate-300 overflow-x-auto !bg-transparent; 
+            }
+            .code-container pre code {
+                @apply !bg-transparent !p-0 !border-none !text-inherit;
+            }
+            
+            /* Inline code stays similar but more neutral */
+            .prose :where(code):not(:where([class~="not-prose"] *)) {
+                @apply bg-slate-100 dark:bg-slate-800/50 px-1.5 py-0.5 rounded-md text-slate-700 dark:text-slate-300 font-semibold text-[0.9em] border border-slate-200 dark:border-slate-700/50;
+            }
+            .prose :where(code):not(:where([class~="not-prose"] *))::before { content: "" }
+            .prose :where(code):not(:where([class~="not-prose"] *))::after { content: "" }
         }
     </style>
 </head>
@@ -60,32 +102,21 @@
                         <span class="text-xl font-extrabold tracking-tight text-slate-900 dark:text-white">Aby Shergill</span>
                     </a>
                     <div class="hidden md:flex items-center gap-6">
-                        <!-- Python Dropdown -->
+                        {% for category in nav_categories %}
                         <div class="relative group">
                             <button class="flex items-center gap-1 text-sm font-medium text-slate-600 hover:text-primary-600 dark:text-slate-400 dark:hover:text-primary-400 transition-colors">
-                                Python
+                                {{ category.name }}
                                 <svg class="w-4 h-4 transition-transform group-hover:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                             </button>
                             <div class="absolute left-0 mt-2 w-48 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
                                 <div class="p-2 space-y-1">
-                                    <a href="/course/python/" class="block px-4 py-2 text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-primary-600 rounded-lg">Python Basics</a>
-                                    <a href="/course/django/" class="block px-4 py-2 text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-primary-600 rounded-lg">Django Framework</a>
+                                    {% for subject in category.subjects.all %}
+                                    <a href="{% url 'subject_detail' subject.slug %}" class="block px-4 py-2 text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-primary-600 rounded-lg">{{ subject.title }}</a>
+                                    {% endfor %}
                                 </div>
                             </div>
                         </div>
-
-                        <!-- Miscellaneous Dropdown -->
-                        <div class="relative group">
-                            <button class="flex items-center gap-1 text-sm font-medium text-slate-600 hover:text-primary-600 dark:text-slate-400 dark:hover:text-primary-400 transition-colors">
-                                Miscellaneous
-                                <svg class="w-4 h-4 transition-transform group-hover:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                            </button>
-                            <div class="absolute left-0 mt-2 w-48 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-                                <div class="p-2 space-y-1">
-                                    <a href="/course/markdown/" class="block px-4 py-2 text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-primary-600 rounded-lg">Markdown Guide</a>
-                                </div>
-                            </div>
-                        </div>
+                        {% endfor %}
                         
                         <a href="/contact/" class="text-sm font-medium text-slate-600 hover:text-primary-600 dark:text-slate-400 dark:hover:text-primary-400 transition-colors">Support</a>
                         
@@ -155,11 +186,15 @@
                 </div>
             </div>
             {% endif %}
-            <div class="space-y-2">
-                <p class="text-xs font-bold text-slate-400 uppercase tracking-widest px-2">Courses</p>
-                <a href="/course/python/" class="block px-4 py-2 text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">Python Basics</a>
-                <a href="/course/django/" class="block px-4 py-2 text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">Django Framework</a>
-                <a href="/course/markdown/" class="block px-4 py-2 text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">Markdown Guide</a>
+            <div class="space-y-4">
+                {% for category in nav_categories %}
+                <div class="space-y-2">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2">{{ category.name }}</p>
+                    {% for subject in category.subjects.all %}
+                    <a href="{% url 'subject_detail' subject.slug %}" class="block px-4 py-2 text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">{{ subject.title }}</a>
+                    {% endfor %}
+                </div>
+                {% endfor %}
             </div>
             <div class="space-y-2 pt-4 border-t border-slate-100 dark:border-slate-900">
                 <a href="/qa/" class="block px-4 py-2 text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">Q&A</a>

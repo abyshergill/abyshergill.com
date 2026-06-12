@@ -1,26 +1,37 @@
 import os
 import re
 from django.core.management.base import BaseCommand
-from lectures.models import Subject, Chapter
+from lectures.models import Subject, Chapter, Topic, Category
 
 class Command(BaseCommand):
     help = 'Populate the database with initial subjects and chapters'
 
     def handle(self, *args, **options):
-        base_dir = '/home/aby/Downloads/Main'
+        base_dir = os.getcwd()
         
+        # Create categories
+        python_cat, _ = Category.objects.get_or_create(name='Python', defaults={'order': 0})
+        misc_cat, _ = Category.objects.get_or_create(name='Miscellaneous', defaults={'order': 1})
+
         # Define subjects to import
         subjects_to_import = [
-            {'title': 'Django', 'dir': 'Django', 'icon': '🎸'},
-            {'title': 'Markdown', 'dir': 'Markdown', 'icon': '📝'},
-            # Python content will be handled specially or manually if needed
+            {'title': 'Django', 'dir': 'Django', 'icon': '🎸', 'category': python_cat},
+            {'title': 'Markdown', 'dir': 'Markdown', 'icon': '📝', 'category': misc_cat},
         ]
 
         for sub_data in subjects_to_import:
             subject, created = Subject.objects.get_or_create(
                 title=sub_data['title'],
-                defaults={'description': f"Learn everything about {sub_data['title']} in this comprehensive course.", 'icon': sub_data['icon']}
+                defaults={
+                    'description': f"Learn everything about {sub_data['title']} in this comprehensive course.", 
+                    'icon': sub_data['icon'],
+                    'category': sub_data['category']
+                }
             )
+            # Ensure category is set if subject already existed
+            if not subject.category:
+                subject.category = sub_data['category']
+                subject.save()
             if created:
                 self.stdout.write(self.style.SUCCESS(f"Created Subject: {subject.title}"))
 
@@ -58,11 +69,30 @@ class Command(BaseCommand):
                     if created:
                         self.stdout.write(self.style.SUCCESS(f"  Created Chapter: {chapter.title}"))
 
+                    # Extract topics from markdown (lines starting with ##)
+                    chapter.topics.all().delete() # Clear existing topics for this chapter
+                    topics_found = re.findall(r'^##\s+(.+)$', content, re.MULTILINE)
+                    for j, topic_title in enumerate(topics_found):
+                        Topic.objects.create(
+                            chapter=chapter,
+                            title=topic_title.strip(),
+                            order=j
+                        )
+                    if topics_found:
+                        self.stdout.write(self.style.SUCCESS(f"    Added {len(topics_found)} topics"))
+
         # Add a Python subject manually since it's just an HTML file in the root
         python_subject, created = Subject.objects.get_or_create(
             title='Python',
-            defaults={'description': 'Master Python programming from scratch.', 'icon': '🐍'}
+            defaults={
+                'description': 'Master Python programming from scratch.', 
+                'icon': '🐍',
+                'category': python_cat
+            }
         )
+        if not python_subject.category:
+            python_subject.category = python_cat
+            python_subject.save()
         if created:
              # Just add one chapter for Python as a placeholder
              Chapter.objects.get_or_create(

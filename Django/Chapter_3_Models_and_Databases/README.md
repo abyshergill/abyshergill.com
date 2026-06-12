@@ -120,4 +120,3 @@ Log in with the superuser credentials you just made. You will see a beautiful da
 ---
 
 You now have a real database hooked up, and you’ve successfully stored information inside it using Python.
-

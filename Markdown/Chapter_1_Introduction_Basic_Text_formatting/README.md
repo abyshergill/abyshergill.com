@@ -67,7 +67,7 @@ This is **bold** text using asterisks.
 This is also __bold__ text using underscores.
 ```
 
-#### 3. Bold & Italic
+\#### 3. Bold & Italic
 
 Want to use both at once? Wrap your text in *triple* asterisks.
 
@@ -89,7 +89,7 @@ The world is ~~flat~~ a sphere.
 
 ---
 
-### Putting It All Together
+/### Putting It All Together
 
 If a computer were to render the syntax we just learned, it would look like this:
 
@@ -110,4 +110,3 @@ Before we unlock Chapter 2, let's make sure your fingers have the muscle memory.
 1. A level 3 heading.
 2. A sentence where one word is *italicized* and another word is **bold**.
 3. A crossed-out word using strikethrough.
-

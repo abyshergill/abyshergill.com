@@ -79,6 +79,10 @@
             .code-container pre code {
                 @apply !bg-transparent !p-0 !border-none !text-inherit;
             }
+
+            .copy-code-btn {
+                @apply absolute top-3 right-3 p-1.5 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700 rounded-md text-xs text-slate-300 transition-colors z-10;
+            }
             
             /* Inline code stays similar but more neutral */
             .prose :where(code):not(:where([class~="not-prose"] *)) {
@@ -323,6 +327,47 @@
         }
 
         document.getElementById('year').innerText = new Date().getFullYear();
+
+        // Robust Copy to Clipboard function
+        async function copyToClipboard(text, btn) {
+            const originalText = btn.innerText;
+            try {
+                if (navigator.clipboard && window.isSecureContext) {
+                    await navigator.clipboard.writeText(text);
+                } else {
+                    // Fallback for non-secure contexts
+                    const textArea = document.createElement("textarea");
+                    textArea.value = text;
+                    textArea.style.position = "fixed";
+                    textArea.style.left = "-9999px";
+                    textArea.style.top = "0";
+                    document.body.appendChild(textArea);
+                    textArea.focus();
+                    textArea.select();
+                    const successful = document.execCommand('copy');
+                    textArea.remove();
+                    if (!successful) throw new Error('copy command failed');
+                }
+                btn.innerText = "Copied!";
+                btn.classList.add('bg-emerald-600/50', 'border-emerald-500');
+            } catch (err) {
+                console.error('Failed to copy: ', err);
+                btn.innerText = "Error";
+            }
+            setTimeout(() => {
+                btn.innerText = originalText;
+                btn.classList.remove('bg-emerald-600/50', 'border-emerald-500');
+            }, 2000);
+        }
+
+        // Event delegation for copy buttons (handles HTMX loaded content)
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('copy-code-btn')) {
+                const container = e.target.closest('.code-container');
+                const code = container.querySelector('pre').innerText;
+                copyToClipboard(code, e.target);
+            }
+        });
     </script>
     {% block extra_js %}{% endblock %}
 </body>

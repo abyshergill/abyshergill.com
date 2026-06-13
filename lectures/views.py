@@ -1,4 +1,5 @@
 import markdown
+import bleach
 import time
 import os
 from django.utils import timezone
@@ -105,8 +106,11 @@ def forgot_password_step2(request):
     if not user_id:
         return redirect('forgot_password_step1')
     
-    user = User.objects.get(id=user_id)
-    profile = user.profile
+    user = get_object_or_404(User, id=user_id)
+    profile = getattr(user, 'profile', None)
+    if not profile:
+        messages.error(request, "User profile not found.")
+        return redirect('forgot_password_step1')
     ip_address = get_client_ip(request)
     # Use user_id as identifier for recovery attempts
     attempt_id = f"recovery_{user_id}"
@@ -153,7 +157,7 @@ def forgot_password_reset(request):
         confirm_password = request.POST.get('confirm_password')
         if password == confirm_password:
             user_id = request.session.get('recovery_user_id')
-            user = User.objects.get(id=user_id)
+            user = get_object_or_404(User, id=user_id)
             user.set_password(password)
             user.save()
             del request.session['recovery_user_id']
@@ -170,13 +174,20 @@ def logout_view(request):
     return redirect('home')
 
 def login_view(request):
+    if request.user.is_authenticated:
+        return redirect('home')
+
+    next_url = request.GET.get('next', 'home')
+
     if request.method == 'POST':
         login_val = request.POST.get('login', '').strip()
         password = request.POST.get('password', '')
+        remember = request.POST.get('remember') == 'on'
+        next_url = request.POST.get('next', 'home')
         
         if not login_val:
             messages.error(request, "Username or Email is required.")
-            return render(request, 'login.html')
+            return render(request, 'login.html', {'next': next_url})
 
         ip_address = get_client_ip(request)
         delay, attempt, ip_attempt = get_login_delay(login_val, ip_address)
@@ -187,7 +198,7 @@ def login_view(request):
             if time_since_last < delay:
                 wait_time = int(delay - time_since_last)
                 messages.error(request, f"Too many failed attempts. Please wait {wait_time} seconds.")
-                return render(request, 'login.html')
+                return render(request, 'login.html', {'next': next_url})
 
         # Try to find a user by username or email
         user = None
@@ -203,19 +214,28 @@ def login_view(request):
             
         if user is not None:
             login(request, user)
+            if not remember:
+                request.session.set_expiry(0)
+
             attempt.failures = 0
             attempt.save()
             ip_attempt.failures = 0
             ip_attempt.save()
-            return redirect('home')
+
+            # Security: Ensure redirect is safe
+            from django.utils.http import url_has_allowed_host_and_scheme
+            if not url_has_allowed_host_and_scheme(url=next_url, allowed_hosts={request.get_host()}):
+                next_url = 'home'
+
+            return redirect(next_url)
         else:
             attempt.failures += 1
             attempt.save()
             ip_attempt.failures += 1
             ip_attempt.save()
             messages.error(request, "Invalid username or password.")
-            return render(request, 'login.html')
-    return render(request, 'login.html')
+            return render(request, 'login.html', {'next': next_url})
+    return render(request, 'login.html', {'next': next_url})
 
 def handler404(request, exception):
     return render(request, 'error.html', {
@@ -258,13 +278,17 @@ def subject_detail(request, subject_slug, chapter_slug=None):
             # If disk file is significantly newer than database record, sync from disk
             # We use a small buffer (e.g. 1 second) to account for filesystem precision
             if file_mtime > current_chapter.updated_at + timezone.timedelta(seconds=1):
-                with open(current_chapter.file_path, 'r') as f:
-                    disk_content = f.read()
-                if disk_content != current_chapter.content:
-                    current_chapter.content = disk_content
-                    # We use .save() which will also trigger Chapter.save() to write back,
-                    # but since content is now same as disk, it's safe.
-                    current_chapter.save()
+                try:
+                    with open(current_chapter.file_path, 'r') as f:
+                        disk_content = f.read()
+                    if disk_content != current_chapter.content:
+                        current_chapter.content = disk_content
+                        # We use .save() which will also trigger Chapter.save() to write back,
+                        # but since content is now same as disk, it's safe.
+                        current_chapter.save()
+                except (OSError, IOError) as e:
+                    # Log error or handle gracefully
+                    print(f"Error reading chapter file: {e}")
 
     content_html = ""
     if current_chapter:
@@ -276,11 +300,33 @@ def subject_detail(request, subject_slug, chapter_slug=None):
             'fenced_code',
         ]
         md = markdown.Markdown(extensions=extensions)
-        content_html = md.convert(current_chapter.content)
+        html = md.convert(current_chapter.content)
+
+        # Sanitize HTML
+        allowed_tags = [
+            'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+            'p', 'br', 'hr', 'pre', 'code', 'blockquote',
+            'ul', 'ol', 'li', 'dl', 'dt', 'dd',
+            'em', 'strong', 'b', 'i', 'u', 's', 'del', 'ins',
+            'a', 'img', 'table', 'thead', 'tbody', 'tr', 'th', 'td',
+            'div', 'span', 'button'
+        ]
+        allowed_attrs = {
+            'a': ['href', 'title', 'target'],
+            'img': ['src', 'alt', 'title', 'width', 'height'],
+            'code': ['class'],
+            'pre': ['class'],
+            'div': ['class', 'id'],
+            'span': ['class'],
+            'button': ['class'],
+            '*': ['id'] # For TOC and section links
+        }
+        content_html = bleach.clean(html, tags=allowed_tags, attributes=allowed_attrs)
         
         # Post-processing: wrap pre/code in code-container for our CSS
-        # This is a simple replacement, for more complex ones we could use a markdown extension
-        content_html = content_html.replace('<pre>', '<div class="code-container relative group"><button class="copy-code-btn">Copy</button><pre>')
+        # We use a regex to handle cases where <pre> might have attributes
+        import re
+        content_html = re.sub(r'(<pre[^>]*>)', r'<div class="code-container relative group"><button class="copy-code-btn">Copy</button>\1', content_html)
         content_html = content_html.replace('</pre>', '</pre></div>')
 
     context = {

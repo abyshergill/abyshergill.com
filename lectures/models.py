@@ -79,7 +79,7 @@ class Chapter(models.Model):
                     if disk_content != self.content:
                         with open(self.file_path, 'w') as f:
                             f.write(self.content)
-                except Exception:
+                except (OSError, IOError):
                     pass
 
         super().save(*args, **kwargs)

@@ -1,7 +1,7 @@
 import os
 import re
 from django.core.management.base import BaseCommand
-from lectures.models import Subject, Chapter, Topic, Category
+from lectures.models import Subject, Chapter, Topic, Category, ContactMessage, QuestionAnswer
 
 class Command(BaseCommand):
     help = 'Populate the database with initial subjects and chapters'
@@ -105,5 +105,29 @@ class Command(BaseCommand):
                  }
              )
              self.stdout.write(self.style.SUCCESS("Created Subject: Python"))
+
+        # Create sample Contact Messages
+        ContactMessage.objects.get_or_create(
+            name='John Doe',
+            email='john@example.com',
+            subject='Course Inquiry',
+            message='I would like to know more about the advanced Python topics.'
+        )
+        ContactMessage.objects.get_or_create(
+            name='Jane Smith',
+            email='jane@example.com',
+            subject='Help Needed',
+            message='I am stuck on Chapter 3 of the Django course.'
+        )
+
+        # Create sample Q&A
+        QuestionAnswer.objects.get_or_create(
+            question='Is this course suitable for beginners?',
+            answer='Yes, all our courses are designed to take you from zero to hero!'
+        )
+        QuestionAnswer.objects.get_or_create(
+            question='Can I access the content offline?',
+            answer='Currently, we only support online access, but you can download the code snippets.'
+        )
 
         self.stdout.write(self.style.SUCCESS("Database population complete!"))

@@ -1,5 +1,6 @@
 from django import forms
 from django.contrib.auth.models import User
+from django.contrib.auth.password_validation import validate_password
 from .models import ContactMessage, UserProfile
 
 class ContactForm(forms.ModelForm):
@@ -32,6 +33,13 @@ class SignupForm(forms.ModelForm):
         cleaned_data = super().clean()
         password = cleaned_data.get("password")
         confirm_password = cleaned_data.get("confirm_password")
+        user = User(username=cleaned_data.get('username'), email=cleaned_data.get('email'))
+
+        if password:
+            try:
+                validate_password(password, user)
+            except forms.ValidationError as e:
+                self.add_error('password', e)
 
         if password != confirm_password:
             raise forms.ValidationError("Passwords do not match")

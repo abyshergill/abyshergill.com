@@ -22,7 +22,7 @@
                 <nav id="sidebar-nav" class="space-y-2 overflow-y-auto pr-2 custom-scrollbar flex-grow">
                     {% for chapter in chapters %}
                     <div class="chapter-container">
-                        <details class="group" {% if current_chapter.id == chapter.id %}open{% endif %}>
+                        <details class="group">
                             <summary class="list-none cursor-pointer outline-none">
                                 <div class="chapter-link-wrapper flex items-center justify-between px-4 py-2.5 text-[15px] font-semibold rounded-xl transition-all duration-200 
                                    {% if current_chapter.id == chapter.id %}
@@ -108,23 +108,5 @@
         element.classList.remove('text-slate-600', 'dark:text-slate-400', 'hover:bg-slate-100', 'dark:hover:bg-slate-900', 'hover:text-primary-600');
     }
 
-    // Copy button enhancement
-    document.querySelectorAll('.code-container').forEach(container => {
-        const copyBtn = container.querySelector('.copy-code-btn');
-        const pre = container.querySelector('pre');
-        
-        // Tailwind styling for injected copy buttons
-        if (copyBtn) {
-            copyBtn.className = "absolute top-3 right-3 p-1.5 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700 rounded-md text-xs text-slate-300 transition-colors z-10";
-        }
-
-        copyBtn?.addEventListener('click', () => {
-            navigator.clipboard.writeText(pre.innerText).then(() => {
-                const originalText = copyBtn.innerText;
-                copyBtn.innerText = "Copied!";
-                setTimeout(() => { copyBtn.innerText = originalText; }, 2000);
-            });
-        });
-    });
 </script>
 {% endblock %}
